@@ -12,10 +12,6 @@ from dotenv import load_dotenv
 load_dotenv()  # looks in backend/ folder
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env"), override=True)
 
-# Debug: confirm credentials loaded (remove after login works)
-print(f"[AUTH] ADMIN_USERNAME={repr(os.environ.get('ADMIN_USERNAME'))}")
-print(f"[AUTH] ADMIN_PASSWORD={repr(os.environ.get('ADMIN_PASSWORD'))}")
-
 SECRET_KEY = os.getenv("API_SECRET_KEY", "fallback-secret-change-me")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 480  # 8 hours

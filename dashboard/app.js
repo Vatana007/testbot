@@ -94,6 +94,15 @@ function formatDate(isoString) {
 
 // ── Auth ───────────────────────────────────────────────────────────────────
 
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
 document.getElementById("login-form").addEventListener("submit", async (e) => {
   e.preventDefault();
   const btn = document.getElementById("login-btn");
@@ -157,7 +166,7 @@ function enterDashboard() {
 
   // Hide admin-only nav items for teachers
   if (userRole !== "admin") {
-    document.querySelectorAll('[data-tab="broadcast"], [data-tab="classes"]').forEach(el => {
+    document.querySelectorAll('[data-tab="broadcast"], [data-tab="classes"], [data-tab="users"]').forEach(el => {
       el.style.display = "none";
     });
   }
@@ -168,6 +177,7 @@ function enterDashboard() {
   loadHolidays();
   if (userRole === "admin") {
     loadBroadcastHistory();
+    loadUsers();
   }
 }
 
@@ -181,6 +191,7 @@ const TAB_TITLES = {
   holidays: "Holidays",
   broadcast: "Broadcast",
   classes: "Classes",
+  users: "Users",
 };
 
 document.querySelectorAll(".nav-item").forEach(btn => {
@@ -302,6 +313,63 @@ async function deleteClass(id) {
 }
 
 // ── Homework ───────────────────────────────────────────────────────────────
+
+async function loadUsers() {
+  if (userRole !== "admin") return;
+
+  const container = document.getElementById("users-list");
+  container.innerHTML = '<p class="empty-state">Loading users...</p>';
+
+  try {
+    const resp = await apiFetch("/api/subscribers");
+    const users = resp.ok ? await resp.json() : [];
+    const active = users.filter(u => u.is_active).length;
+    const inactive = users.length - active;
+
+    document.getElementById("users-total").textContent = users.length;
+    document.getElementById("users-active").textContent = active;
+    document.getElementById("users-inactive").textContent = inactive;
+    document.getElementById("stat-subscribers").textContent = active;
+
+    if (!users.length) {
+      container.innerHTML = '<p class="empty-state">No Telegram users have started the bot yet.</p>';
+      return;
+    }
+
+    container.innerHTML = users.map(user => {
+      const name = escapeHtml(user.first_name || "Unknown user");
+      const username = user.username ? `@${escapeHtml(user.username)}` : "No username";
+      const classCode = user.class_code ? escapeHtml(user.class_code) : "No class";
+      const language = escapeHtml((user.language || "en").toUpperCase());
+      const statusClass = user.is_active ? "badge-emerald" : "badge-amber";
+      const statusText = user.is_active ? "Active" : "Inactive";
+
+      return `
+        <div class="item-card">
+          <div class="item-body">
+            <div class="item-title">
+              <span class="badge ${statusClass}">${statusText}</span>
+              ${name}
+            </div>
+            <div class="item-meta">
+              Telegram ID: <strong>${escapeHtml(user.telegram_id)}</strong>
+              <span class="dot">Â·</span>
+              ${username}
+              <span class="dot">Â·</span>
+              Class: <strong>${classCode}</strong>
+              <span class="dot">Â·</span>
+              Language: <strong>${language}</strong>
+              <span class="dot">Â·</span>
+              Joined ${formatDate(user.subscribed_at)}
+            </div>
+          </div>
+        </div>
+      `;
+    }).join("");
+  } catch {
+    container.innerHTML = '<p class="empty-state">Failed to load users.</p>';
+  }
+}
 
 async function loadHomework(classCode = "") {
   const container = document.getElementById("homework-list");

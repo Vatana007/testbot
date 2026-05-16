@@ -359,6 +359,16 @@ def subscriber_count(db: Session = Depends(get_db), _=Depends(get_current_user))
     return {"count": count}
 
 
+@app.get("/api/subscribers", response_model=list[schemas.SubscriberOut])
+def list_subscribers(db: Session = Depends(get_db), _=Depends(require_admin)):
+    """Dashboard endpoint for admins to view registered Telegram users."""
+    return (
+        db.query(models.Subscriber)
+        .order_by(models.Subscriber.subscribed_at.desc())
+        .all()
+    )
+
+
 @app.get("/api/subscribers/{telegram_id}", response_model=schemas.SubscriberOut)
 def get_subscriber(telegram_id: str, db: Session = Depends(get_db)):
     """Called by the bot to check if a parent has a registered class."""

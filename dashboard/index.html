@@ -159,6 +159,10 @@
           <span class="nav-icon"><svg viewBox="0 0 20 20" fill="currentColor"><path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v1h8v-1zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-1a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v1h-3zM4.75 14.094A5.973 5.973 0 004 17v1H1v-1a3 3 0 013.75-2.906z"/></svg></span>
           <span class="nav-label">Classes</span>
         </button>
+        <button class="nav-item" data-tab="users">
+          <span class="nav-icon"><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 2a4 4 0 100 8 4 4 0 000-8zM3 18a7 7 0 1114 0H3z" clip-rule="evenodd"/></svg></span>
+          <span class="nav-label">Users</span>
+        </button>
       </nav>
 
       <div class="sidebar-footer">
@@ -296,6 +300,33 @@
         </div>
         <div class="list-header"><h3>All Classes</h3></div>
         <div id="classes-list" class="item-list"><div class="skeleton-list"><div class="skeleton"></div><div class="skeleton"></div></div></div>
+      </section>
+
+      <!-- USERS -->
+      <section id="tab-users" class="tab-content">
+        <div class="page-header">
+          <div class="page-header-icon indigo"><svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 2a4 4 0 100 8 4 4 0 000-8zM3 18a7 7 0 1114 0H3z" clip-rule="evenodd"/></svg></div>
+          <div><h2>Telegram Users</h2><p>Parents who have started the bot</p></div>
+        </div>
+        <div class="user-summary-grid">
+          <div class="card user-summary-card">
+            <span>Total Users</span>
+            <strong id="users-total">0</strong>
+          </div>
+          <div class="card user-summary-card">
+            <span>Active Users</span>
+            <strong id="users-active">0</strong>
+          </div>
+          <div class="card user-summary-card">
+            <span>Inactive Users</span>
+            <strong id="users-inactive">0</strong>
+          </div>
+        </div>
+        <div class="list-header">
+          <h3>Registered Users</h3>
+          <button class="btn btn-primary btn-sm" onclick="loadUsers()">Refresh</button>
+        </div>
+        <div id="users-list" class="item-list"><div class="skeleton-list"><div class="skeleton"></div><div class="skeleton"></div></div></div>
       </section>
 
     </main>

@@ -442,6 +442,11 @@ select {
 
 .btn-full { width: 100%; }
 
+.btn-sm {
+  padding: .4rem .75rem;
+  font-size: .78rem;
+}
+
 /* ═══════════════════════════════════════════════════
    Messages
 ════════════════════════════════════════════════════ */
@@ -798,6 +803,34 @@ select {
 
 .dot { color: var(--gray-300); }
 
+.user-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.user-summary-card {
+  margin-bottom: 0;
+}
+
+.user-summary-card span {
+  display: block;
+  font-size: .75rem;
+  font-weight: 700;
+  color: var(--gray-500);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  margin-bottom: .35rem;
+}
+
+.user-summary-card strong {
+  display: block;
+  font-size: 1.8rem;
+  line-height: 1;
+  color: var(--gray-900);
+}
+
 /* ── File drop zone ── */
 .file-drop {
   border: 2px dashed var(--gray-300);
@@ -893,6 +926,7 @@ select {
   .topbar { padding: .875rem 1rem; }
   .tab-content { padding: 1rem; }
   .form-row { flex-direction: column; }
+  .user-summary-grid { grid-template-columns: 1fr; }
   .stats-bar { display: none; }
 }
 

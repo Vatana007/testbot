@@ -88,6 +88,7 @@ class SubscriberOut(BaseModel):
     is_active: bool
     class_code: Optional[str]
     language: str = "en"
+    subscribed_at: datetime
 
     model_config = {"from_attributes": True}
 
