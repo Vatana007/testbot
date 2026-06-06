@@ -53,11 +53,11 @@ def run_bot():
         return
 
     import sys
-    sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "bot"))
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src"))
 
     try:
         import asyncio
-        import bot as school_bot
+        import bot_main as school_bot
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         school_bot.main()
@@ -92,7 +92,7 @@ async def lifespan(app: FastAPI):
         if api_url:
             ping_thread = threading.Thread(target=keep_alive, args=(api_url,), daemon=True, name="keep-alive")
             ping_thread.start()
-            print(f"[PING] Keep-alive started → {api_url}/health")
+            print(f"[PING] Keep-alive started -> {api_url}/health")
     else:
         print("[BOT] Bot thread disabled (RUN_BOT != true). Run bot.py separately.")
     yield
@@ -513,28 +513,7 @@ def health_head():
     return {}
 
 
-# ---------------------------------------------------------------------------
-# Start Telegram bot in background thread
-# ---------------------------------------------------------------------------
-
-def run_bot():
-    """Run the Telegram bot in a separate thread alongside the web server."""
-    bot_token = os.getenv("TELEGRAM_BOT_TOKEN", "")
-    if not bot_token:
-        print("[BOT] No TELEGRAM_BOT_TOKEN set — bot not started.")
-        return
-
-    import sys
-    sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "bot"))
-
-    try:
-        import asyncio
-        import bot as school_bot
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        school_bot.main()
-    except Exception as e:
-        print(f"[BOT] Failed to start: {e}")
+# (Duplicate run_bot function removed)
 
 
 # ---------------------------------------------------------------------------
