@@ -54,6 +54,7 @@ def main():
         states={
             PICKING_LANG: [
                 CallbackQueryHandler(button_handler, pattern="^lang:"),
+<<<<<<< HEAD
                 CallbackQueryHandler(button_handler, pattern="^menu_back$"),
             ],
             PICKING_CLASS: [
@@ -65,6 +66,14 @@ def main():
             CommandHandler("cancel", cancel),
             CommandHandler("start", start),
         ],
+=======
+            ],
+            PICKING_CLASS: [
+                CallbackQueryHandler(button_handler, pattern="^pick:"),
+            ],
+        },
+        fallbacks=[CommandHandler("cancel", cancel)],
+>>>>>>> 0107596f5457f0bb1b3a42df5df7b8180e7999da
         per_chat=True,
         per_message=False,
     )

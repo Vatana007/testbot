@@ -21,6 +21,7 @@ PICKING_CLASS = 1
 # Language helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
+<<<<<<< HEAD
 async def get_lang(user_id: int, context: ContextTypes.DEFAULT_TYPE) -> str:
     """Return the cached language for this user session, or fetch from DB if not cached."""
     if "lang" in context.user_data:
@@ -34,6 +35,11 @@ async def get_lang(user_id: int, context: ContextTypes.DEFAULT_TYPE) -> str:
     except Exception as e:
         logger.warning(f"Could not load language from database: {e}")
     return "en"
+=======
+def get_lang(context: ContextTypes.DEFAULT_TYPE) -> str:
+    """Return the cached language for this user session (default 'en')."""
+    return context.user_data.get("lang", "en")
+>>>>>>> 0107596f5457f0bb1b3a42df5df7b8180e7999da
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -51,10 +57,18 @@ def main_menu(lang: str, has_class: bool = True) -> InlineKeyboardMarkup:
     rows = [
         [InlineKeyboardButton(t("btn_homework",  lang), callback_data="hw_mine")],
         [InlineKeyboardButton(t("btn_holidays",  lang), callback_data="menu_holidays")],
+<<<<<<< HEAD
         [InlineKeyboardButton(t("btn_change_class", lang), callback_data="change_class")],
         [InlineKeyboardButton(t("btn_about",       lang), callback_data="menu_about")],
         [InlineKeyboardButton(t("btn_change_lang", lang), callback_data="change_lang")],
     ]
+=======
+    ]
+    if has_class:
+        rows.append([InlineKeyboardButton(t("btn_change_class", lang), callback_data="change_class")])
+    rows.append([InlineKeyboardButton(t("btn_about",       lang), callback_data="menu_about")])
+    rows.append([InlineKeyboardButton(t("btn_change_lang", lang), callback_data="change_lang")])
+>>>>>>> 0107596f5457f0bb1b3a42df5df7b8180e7999da
     return InlineKeyboardMarkup(rows)
 
 
@@ -68,6 +82,7 @@ def back_menu(lang: str) -> InlineKeyboardMarkup:
 # Formatting helpers
 # ─────────────────────────────────────────────────────────────────────────────
 
+<<<<<<< HEAD
 def today_str(lang: str = "en") -> str:
     now = datetime.now()
     if lang == "km":
@@ -104,6 +119,10 @@ def today_str(lang: str = "en") -> str:
         
         return f"ថ្ងៃ{day_km}, ទី{int(day_num)} {month_km} {year}"
     return now.strftime("%A, %d %B %Y")
+=======
+def today_str() -> str:
+    return datetime.now().strftime("%A, %d %B %Y")
+>>>>>>> 0107596f5457f0bb1b3a42df5df7b8180e7999da
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -113,8 +132,13 @@ def today_str(lang: str = "en") -> str:
 async def show_lang_picker(target):
     """Show the language selection screen. target can be a Message or CallbackQuery."""
     text = (
+<<<<<<< HEAD
         "🌐 *Choose Your Language / ជ្រើសរើសភាសា*\n"
         "━━━━━━━━━━━━━━━━━━━━\n"
+=======
+        "🌐 *Choose Your Language / ជ្រើសរើសភាសា*\n\n"
+        "────────────────────────────\n"
+>>>>>>> 0107596f5457f0bb1b3a42df5df7b8180e7999da
         "🇬🇧  Please select your preferred language.\n"
         "🇰🇭  សូមជ្រើសរើសភាសាដែលអ្នកចូលចិត្ត។"
     )
@@ -131,11 +155,18 @@ async def show_class_picker(target, lang: str, first_name: str = "", first_time:
 
     if not classes:
         msg = t("class_none_available", lang)
+<<<<<<< HEAD
         keyboard = back_menu(lang)
         if hasattr(target, "edit_message_text"):
             await target.edit_message_text(msg, parse_mode="Markdown", reply_markup=keyboard)
         else:
             await target.reply_text(msg, parse_mode="Markdown", reply_markup=keyboard)
+=======
+        if hasattr(target, "edit_message_text"):
+            await target.edit_message_text(msg, parse_mode="Markdown")
+        else:
+            await target.reply_text(msg, parse_mode="Markdown")
+>>>>>>> 0107596f5457f0bb1b3a42df5df7b8180e7999da
         return False
 
     buttons, row = [], []
@@ -177,24 +208,40 @@ async def show_homework(query, class_code: str, lang: str):
 
     if not data:
         await query.edit_message_text(
+<<<<<<< HEAD
             t("hw_none_today", lang, code=class_code, date=today_str(lang)),
+=======
+            t("hw_none_today", lang, code=class_code, date=today_str()),
+>>>>>>> 0107596f5457f0bb1b3a42df5df7b8180e7999da
             parse_mode="Markdown",
             reply_markup=back_menu(lang),
         )
         return
 
     count = len(data)
+<<<<<<< HEAD
     divider = "━━━━━━━━━━━━━━━━━━━━"
     lines = [t(
         "hw_header", lang,
         code=class_code,
         date=today_str(lang),
+=======
+    divider = "────────────────────────────"
+    lines = [t(
+        "hw_header", lang,
+        code=class_code,
+        date=today_str(),
+>>>>>>> 0107596f5457f0bb1b3a42df5df7b8180e7999da
         count=count,
         plural="s" if count > 1 else "",
     ), ""]
 
     for i, hw in enumerate(data, 1):
+<<<<<<< HEAD
         lines.append(t("hw_title", lang, num=i, subject=hw['subject']))
+=======
+        lines.append(f"*{i}\\. {hw['subject']}*")
+>>>>>>> 0107596f5457f0bb1b3a42df5df7b8180e7999da
         lines.append(f"📝  {hw['description']}")
         lines.append(t("hw_due",     lang, date=hw["due_date"]))
         lines.append(t("hw_teacher", lang, name=hw["submitted_by"]))
@@ -213,6 +260,7 @@ async def show_homework(query, class_code: str, lang: str):
         reply_markup=back_menu(lang),
     )
 
+<<<<<<< HEAD
     # Download all files in parallel to significantly reduce response latency
     import asyncio
     files_to_download = [
@@ -229,16 +277,29 @@ async def show_homework(query, class_code: str, lang: str):
         downloaded_contents = await asyncio.gather(*download_tasks)
 
         for (hw, _), content_bytes in zip(files_to_download, downloaded_contents):
+=======
+    # Send attached files by fetching via api_service
+    for hw in data:
+        if hw.get("file_url") and hw.get("file_name"):
+            content_bytes = await api_service.fetch_file(hw["file_url"])
+>>>>>>> 0107596f5457f0bb1b3a42df5df7b8180e7999da
             if content_bytes:
                 try:
                     file_bytes = io.BytesIO(content_bytes)
                     file_bytes.name = hw["file_name"]
+<<<<<<< HEAD
                     due_text = t('hw_due', lang, date=hw['due_date'])
                     due_caption = due_text if lang == "km" else f"_{due_text}_"
                     caption = (
                         f"📎 *{hw['subject']}*\n"
                         f"{hw['file_name']}\n"
                         f"{due_caption}"
+=======
+                    caption = (
+                        f"📎 *{hw['subject']}*\n"
+                        f"{hw['file_name']}\n"
+                        f"_{t('hw_due', lang, date=hw['due_date'])}_"
+>>>>>>> 0107596f5457f0bb1b3a42df5df7b8180e7999da
                     )
                     await query.message.chat.send_document(
                         document=InputFile(file_bytes, filename=hw["file_name"]),
@@ -252,14 +313,24 @@ async def show_homework(query, class_code: str, lang: str):
 async def show_holidays(query, lang: str):
     """Fetch holidays from api_service and display."""
     data = await api_service.get_holidays()
+<<<<<<< HEAD
     divider = "━━━━━━━━━━━━━━━━━━━━"
+=======
+    divider = "────────────────────────────"
+>>>>>>> 0107596f5457f0bb1b3a42df5df7b8180e7999da
 
     if not data:
         text = t("hol_none", lang)
     else:
+<<<<<<< HEAD
         lines = [t("hol_header", lang, date=today_str(lang)), ""]
         for i, h in enumerate(data, 1):
             lines.append(t("hol_title", lang, num=i, title=h['title']))
+=======
+        lines = [t("hol_header", lang, date=today_str()), ""]
+        for i, h in enumerate(data, 1):
+            lines.append(f"*{i}\\. {h['title']}*")
+>>>>>>> 0107596f5457f0bb1b3a42df5df7b8180e7999da
             if h["start_date"] == h["end_date"]:
                 lines.append(t("hol_date_single", lang, date=h["start_date"]))
             else:
@@ -310,7 +381,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "menu_welcome_back", lang,
             name=user.first_name,
             code=class_code,
+<<<<<<< HEAD
             date=today_str(lang),
+=======
+            date=today_str(),
+>>>>>>> 0107596f5457f0bb1b3a42df5df7b8180e7999da
         )
         await update.message.reply_text(
             text,
@@ -328,7 +403,11 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     user  = query.from_user
+<<<<<<< HEAD
     lang  = await get_lang(user.id, context)
+=======
+    lang  = get_lang(context)
+>>>>>>> 0107596f5457f0bb1b3a42df5df7b8180e7999da
 
     # ── Language selected ────────────────────────────────────────────────────
     if query.data.startswith("lang:"):
@@ -348,7 +427,11 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "menu_welcome_back", lang,
                 name=user.first_name,
                 code=sub["class_code"],
+<<<<<<< HEAD
                 date=today_str(lang),
+=======
+                date=today_str(),
+>>>>>>> 0107596f5457f0bb1b3a42df5df7b8180e7999da
             )
             await query.edit_message_text(
                 text,
@@ -393,11 +476,14 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # ── Change class ─────────────────────────────────────────────────────────
     elif query.data == "change_class":
+<<<<<<< HEAD
         sub = await api_service.get_subscriber(str(user.id))
         if not sub or not sub.get("class_code"):
             await query.answer(text=t("alert_no_class", lang), show_alert=True)
             await show_class_picker(query, lang, user.first_name, first_time=True)
             return PICKING_CLASS
+=======
+>>>>>>> 0107596f5457f0bb1b3a42df5df7b8180e7999da
         await show_class_picker(query, lang, user.first_name, first_time=False)
         return PICKING_CLASS
 
@@ -424,7 +510,11 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         sub = await api_service.get_subscriber(str(user.id))
         has_class  = bool(sub and sub.get("class_code"))
         class_line = t("menu_class_line", lang, code=sub["class_code"]) if has_class else ""
+<<<<<<< HEAD
         text = t("menu_main", lang, class_line=class_line, date=today_str(lang))
+=======
+        text = t("menu_main", lang, class_line=class_line, date=today_str())
+>>>>>>> 0107596f5457f0bb1b3a42df5df7b8180e7999da
         await query.edit_message_text(
             text,
             parse_mode="Markdown",
@@ -436,6 +526,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /cancel command to abort conversation states."""
+<<<<<<< HEAD
     user = update.effective_user
     lang = await get_lang(user.id, context)
     sub  = await api_service.get_subscriber(str(user.id))
@@ -443,6 +534,13 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         t("cancelled", lang),
         parse_mode="Markdown",
+=======
+    lang = get_lang(context)
+    sub  = await api_service.get_subscriber(str(update.effective_user.id))
+    has_class = bool(sub and sub.get("class_code"))
+    await update.message.reply_text(
+        t("cancelled", lang),
+>>>>>>> 0107596f5457f0bb1b3a42df5df7b8180e7999da
         reply_markup=main_menu(lang, has_class=has_class),
     )
     return ConversationHandler.END
@@ -450,6 +548,7 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def unknown(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle arbitrary text updates from users that don't match any commands."""
+<<<<<<< HEAD
     user = update.effective_user
     lang = await get_lang(user.id, context)
     sub  = await api_service.get_subscriber(str(user.id))
@@ -457,5 +556,12 @@ async def unknown(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         t("use_menu", lang),
         parse_mode="Markdown",
+=======
+    lang = get_lang(context)
+    sub  = await api_service.get_subscriber(str(update.effective_user.id))
+    has_class = bool(sub and sub.get("class_code"))
+    await update.message.reply_text(
+        t("use_menu", lang),
+>>>>>>> 0107596f5457f0bb1b3a42df5df7b8180e7999da
         reply_markup=main_menu(lang, has_class=has_class),
     )
