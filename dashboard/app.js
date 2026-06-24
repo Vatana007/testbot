@@ -208,17 +208,10 @@ document.querySelectorAll(".nav-item").forEach(btn => {
 
 async function loadStats() {
   try {
-    const [subResp, clsResp] = await Promise.all([
-      apiFetch("/api/subscribers/count"),
-      apiFetch("/api/classes"),
-    ]);
+    const subResp = await apiFetch("/api/subscribers/count");
     if (subResp.ok) {
       const d = await subResp.json();
       document.getElementById("stat-subscribers").textContent = d.count;
-    }
-    if (clsResp.ok) {
-      const d = await clsResp.json();
-      document.getElementById("stat-classes").textContent = d.length;
     }
   } catch { /* silent */ }
 }
@@ -232,6 +225,8 @@ async function loadClasses() {
     classes = await resp.json();
     renderClasses();
     populateClassSelects();
+    // Update classes count badge directly from cached state
+    document.getElementById("stat-classes").textContent = classes.length;
   } catch { /* silent */ }
 }
 
@@ -376,17 +371,8 @@ async function loadHomework(classCode = "") {
   container.innerHTML = '<p class="empty-state">Loading…</p>';
   try {
     const path = classCode ? `/api/homework/${classCode}` : "/api/homework/ALL";
-    // If no filter, load for each class and merge
-    let allHw = [];
-    if (!classCode) {
-      const results = await Promise.all(
-        classes.map(c => apiFetch(`/api/homework/${c.code}`).then(r => r.ok ? r.json() : []))
-      );
-      allHw = results.flat().sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-    } else {
-      const resp = await apiFetch(`/api/homework/${classCode}`);
-      allHw = resp.ok ? await resp.json() : [];
-    }
+    const resp = await apiFetch(path);
+    const allHw = resp.ok ? await resp.json() : [];
 
     if (!allHw.length) {
       container.innerHTML = '<p class="empty-state">No homework submissions found.</p>';

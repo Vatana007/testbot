@@ -7,6 +7,6 @@ python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 python-multipart==0.0.9
 aiofiles==23.2.1
-psycopg2-binary==2.9.9
+psycopg2-binary>=2.9.9
 python-telegram-bot==21.10
 anyio==4.4.0

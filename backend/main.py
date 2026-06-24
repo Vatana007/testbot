@@ -8,7 +8,7 @@ import uuid
 import threading
 import httpx
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form
+from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -18,7 +18,7 @@ from dotenv import load_dotenv
 
 import models
 import schemas
-from database import engine, get_db
+from database import engine, get_db, SessionLocal
 from auth import (
     authenticate_user,
     create_access_token,
@@ -53,11 +53,11 @@ def run_bot():
         return
 
     import sys
-    sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "bot"))
+    sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "src"))
 
     try:
         import asyncio
-        import bot as school_bot
+        import bot_main as school_bot
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         school_bot.main()
@@ -92,7 +92,7 @@ async def lifespan(app: FastAPI):
         if api_url:
             ping_thread = threading.Thread(target=keep_alive, args=(api_url,), daemon=True, name="keep-alive")
             ping_thread.start()
-            print(f"[PING] Keep-alive started → {api_url}/health")
+            print(f"[PING] Keep-alive started -> {api_url}/health")
     else:
         print("[BOT] Bot thread disabled (RUN_BOT != true). Run bot.py separately.")
     yield
@@ -173,7 +173,7 @@ def build_file_url(request_base: str, hw: models.Homework) -> str | None:
 
 
 @app.post("/api/homework", response_model=schemas.HomeworkOut, status_code=201)
-async def submit_homework(
+def submit_homework(
     class_code: str = Form(...),
     subject: str = Form(...),
     description: str = Form(...),
@@ -197,8 +197,8 @@ async def submit_homework(
                 status_code=400,
                 detail=f"File type '{ext}' not allowed. Allowed: {', '.join(ALLOWED_EXTENSIONS)}"
             )
-        # Read and check size
-        contents = await file.read()
+        # Read synchronously from the file object to avoid event loop blockage
+        contents = file.file.read()
         if len(contents) > MAX_FILE_SIZE:
             raise HTTPException(status_code=400, detail="File too large. Max 20 MB.")
 
@@ -238,17 +238,25 @@ async def submit_homework(
 
 @app.get("/api/homework/{class_code}", response_model=list[schemas.HomeworkOut])
 def get_homework(class_code: str, db: Session = Depends(get_db)):
-    """Public endpoint — the bot calls this without auth."""
-    cls = db.query(models.Class).filter(models.Class.code == class_code.upper()).first()
-    if not cls:
-        raise HTTPException(status_code=404, detail="Class not found")
-    homework = (
-        db.query(models.Homework)
-        .filter(models.Homework.class_id == cls.id)
-        .order_by(models.Homework.created_at.desc())
-        .limit(10)
-        .all()
-    )
+    """Public endpoint — the bot or dashboard calls this to get homework."""
+    if class_code.upper() == "ALL":
+        homework = (
+            db.query(models.Homework)
+            .order_by(models.Homework.created_at.desc())
+            .limit(50)  # Optimize cross-class queries with a safe limit
+            .all()
+        )
+    else:
+        cls = db.query(models.Class).filter(models.Class.code == class_code.upper()).first()
+        if not cls:
+            raise HTTPException(status_code=404, detail="Class not found")
+        homework = (
+            db.query(models.Homework)
+            .filter(models.Homework.class_id == cls.id)
+            .order_by(models.Homework.created_at.desc())
+            .limit(10)
+            .all()
+        )
     base = API_BASE_URL
     return [
         schemas.HomeworkOut(
@@ -427,51 +435,125 @@ def set_subscriber_language(
 # Broadcast
 # ---------------------------------------------------------------------------
 
+def send_broadcast_background(message: str, admin_username: str):
+    """Send broadcast messages in the background using page-buffered queries and rate-limiting."""
+    import asyncio
+    db = SessionLocal()
+    try:
+        # Create broadcast log entry initially with 0 recipients
+        log = models.BroadcastLog(
+            message=message,
+            sent_by=admin_username,
+            recipient_count=0,
+        )
+        db.add(log)
+        db.commit()
+        db.refresh(log)
+        log_id = log.id
+
+        async def run_send_loop():
+            page_size = 100
+            offset = 0
+            total_sent = 0
+
+            async with httpx.AsyncClient() as client:
+                while True:
+                    # Query active subscribers in pages to keep memory footprint low
+                    subs = (
+                        db.query(models.Subscriber)
+                        .filter(models.Subscriber.is_active == True)
+                        .order_by(models.Subscriber.id)
+                        .offset(offset)
+                        .limit(page_size)
+                        .all()
+                    )
+                    if not subs:
+                        break
+
+                    # Chunk active subscribers in current page (e.g. 25 at a time)
+                    # to respect Telegram's rate limit of 30 messages per second.
+                    chunk_size = 25
+                    for i in range(0, len(subs), chunk_size):
+                        chunk = subs[i:i+chunk_size]
+                        tasks = []
+                        school_name = os.getenv("SCHOOL_NAME", "Digital University of Cambodia")
+                        for sub in chunk:
+                            announcement_text = (
+                                f"📢 *SCHOOL ANNOUNCEMENT*\n"
+                                f"━━━━━━━━━━━━━━━━━━━━\n\n"
+                                f"{message}\n\n"
+                                f"━━━━━━━━━━━━━━━━━━━━\n"
+                                f"🏫 *{school_name}*"
+                            )
+                            tasks.append(
+                                client.post(
+                                    f"{TELEGRAM_API}/sendMessage",
+                                    json={
+                                        "chat_id": sub.telegram_id,
+                                        "text": announcement_text,
+                                        "parse_mode": "Markdown",
+                                    },
+                                    timeout=10,
+                                )
+                            )
+                        
+                        results = await asyncio.gather(*tasks, return_exceptions=True)
+                        
+                        db_changed = False
+                        for sub, res in zip(chunk, results):
+                            if isinstance(res, httpx.Response):
+                                if res.status_code == 200:
+                                    total_sent += 1
+                                elif res.status_code == 403:
+                                    sub.is_active = False
+                                    db_changed = True
+                            elif isinstance(res, Exception):
+                                # Request failed
+                                pass
+
+                        if db_changed:
+                            db.commit()
+
+                        # Brief sleep between chunks to maintain safe rate limits (<30 msg/sec)
+                        await asyncio.sleep(1.0)
+
+                    offset += page_size
+
+            # Update the broadcast log with the final recipient count
+            db_log = db.query(models.BroadcastLog).filter(models.BroadcastLog.id == log_id).first()
+            if db_log:
+                db_log.recipient_count = total_sent
+                db.commit()
+
+        # Run the async loop inside the background thread
+        asyncio.run(run_send_loop())
+    except Exception as e:
+        print(f"[BROADCAST] Error in background broadcast task: {e}")
+    finally:
+        db.close()
+
+
 @app.post("/api/broadcast", response_model=schemas.BroadcastResult)
-async def broadcast(
+def broadcast(
     payload: schemas.BroadcastRequest,
+    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: dict = Depends(require_admin),
 ):
-    """Send a message to all active subscribers via Telegram."""
+    """Enqueue a message to all active subscribers via Telegram in a background task."""
     if not TELEGRAM_BOT_TOKEN:
         raise HTTPException(status_code=500, detail="Bot token not configured")
 
-    subscribers = db.query(models.Subscriber).filter(models.Subscriber.is_active == True).all()
-    sent_count = 0
+    # Get estimated count of active subscribers to report in response
+    active_count = db.query(models.Subscriber).filter(models.Subscriber.is_active == True).count()
 
-    async with httpx.AsyncClient() as client:
-        for sub in subscribers:
-            try:
-                resp = await client.post(
-                    f"{TELEGRAM_API}/sendMessage",
-                    json={
-                        "chat_id": sub.telegram_id,
-                        "text": f"📢 *School Announcement*\n\n{payload.message}",
-                        "parse_mode": "Markdown",
-                    },
-                    timeout=10,
-                )
-                if resp.status_code == 200:
-                    sent_count += 1
-                elif resp.status_code == 403:
-                    # User blocked the bot — mark inactive
-                    sub.is_active = False
-            except httpx.RequestError:
-                continue
-
-    db.commit()
-
-    # Log the broadcast
-    log = models.BroadcastLog(
-        message=payload.message,
-        sent_by=current_user["username"],
-        recipient_count=sent_count,
+    background_tasks.add_task(
+        send_broadcast_background,
+        payload.message,
+        current_user["username"]
     )
-    db.add(log)
-    db.commit()
 
-    return {"sent_to": sent_count, "message": payload.message}
+    return {"sent_to": active_count, "message": payload.message}
 
 
 @app.get("/api/broadcast/history")
@@ -513,28 +595,7 @@ def health_head():
     return {}
 
 
-# ---------------------------------------------------------------------------
-# Start Telegram bot in background thread
-# ---------------------------------------------------------------------------
-
-def run_bot():
-    """Run the Telegram bot in a separate thread alongside the web server."""
-    bot_token = os.getenv("TELEGRAM_BOT_TOKEN", "")
-    if not bot_token:
-        print("[BOT] No TELEGRAM_BOT_TOKEN set — bot not started.")
-        return
-
-    import sys
-    sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "bot"))
-
-    try:
-        import asyncio
-        import bot as school_bot
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        school_bot.main()
-    except Exception as e:
-        print(f"[BOT] Failed to start: {e}")
+# (Duplicate run_bot function removed)
 
 
 # ---------------------------------------------------------------------------

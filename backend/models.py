@@ -21,7 +21,7 @@ class Homework(Base):
     __tablename__ = "homework"
 
     id = Column(Integer, primary_key=True, index=True)
-    class_id = Column(Integer, ForeignKey("classes.id"), nullable=False)
+    class_id = Column(Integer, ForeignKey("classes.id"), nullable=False, index=True)
     subject = Column(String(100), nullable=False)
     description = Column(Text, nullable=False)
     due_date = Column(String(50), nullable=False)
@@ -66,5 +66,5 @@ class BroadcastLog(Base):
     id = Column(Integer, primary_key=True, index=True)
     message = Column(Text, nullable=False)
     sent_by = Column(String(100), nullable=False)
-    sent_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    sent_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
     recipient_count = Column(Integer, default=0)

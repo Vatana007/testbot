@@ -11,7 +11,7 @@ The system should make it easy for school staff to publish homework, holidays, a
 The project has three main surfaces:
 
 - `backend/`: FastAPI application, database models, authentication, REST API, file uploads, Telegram broadcast delivery, and static dashboard hosting.
-- `bot/`: Telegram bot built with `python-telegram-bot`. Parents use it to register their class, select language, read homework, view holidays, and receive announcements.
+- `src/`: Telegram bot built with `python-telegram-bot` (refactored into handlers and services). Parents use it to register their class, select language, read homework, view holidays, and receive announcements.
 - `dashboard/`: Static HTML, CSS, and JavaScript dashboard for school staff.
 
 The backend is the system of record. The dashboard and bot should call backend APIs rather than duplicating business logic.
@@ -50,9 +50,10 @@ When changing backend behavior:
 
 ## Bot Guidelines
 
-- Bot behavior lives in `bot/bot.py`.
-- Translated strings live in `bot/translations.py`.
-- The bot should call backend APIs through the helper functions in `bot/bot.py`.
+- Bot configuration and polling logic live in `src/bot_main.py`.
+- Message routing and button callbacks live in `src/handlers/bot_handlers.py`.
+- Translated strings live in `src/translations.py`.
+- The bot should call backend APIs strictly through the service functions in `src/services/api_service.py`.
 - The bot supports English (`en`) and Khmer (`km`); do not hardcode user-facing bot text outside translations unless it is a deliberate bilingual language-selection prompt.
 - Be careful with Telegram Markdown escaping when adding dynamic text.
 - Do not store long-term state only in `context.user_data`; persist user preferences to the backend.
@@ -124,12 +125,11 @@ pip install -r requirements.txt
 uvicorn main:app --reload --port 8000
 ```
 
-Start the bot:
+Start the bot manually:
 
 ```powershell
-cd bot
-pip install -r requirements.txt
-python bot.py
+# From project root
+py src/bot_main.py
 ```
 
 Open the dashboard:
